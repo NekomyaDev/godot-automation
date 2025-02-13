@@ -2,39 +2,47 @@ import subprocess
 
 def process_command_with_ollama(prompt: str) -> str:
     """
-    Ollama'yı interaktif modda çalıştırır ve STDIN üzerinden prompt'u gönderir.
-    Komut satırında:
+    Runs Ollama in interactive mode and sends the prompt via STDIN.
+
+    The command line runs:
         ollama run llama2:latest
-    açılır, ardından prompt STDIN üzerinden iletilir ve çıktı okunur.
+    which opens an interactive session. The provided prompt is then sent through STDIN,
+    and the function waits to read and return the output.
+
+    Parameters:
+        prompt (str): The input command or prompt to be processed by the AI model.
+
+    Returns:
+        str: The stripped output from the AI model, or "unknown" if an error occurs.
     """
     if not prompt.strip():
-        print("Boş prompt gönderildi!")
+        print("Empty prompt provided!")
         return ""
     try:
-        # Ollama'yı interaktif modda başlatıyoruz.
+        # Start Ollama in interactive mode.
         proc = subprocess.Popen(
             ["ollama", "run", "llama2:latest"],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            text=True  # metin modunda çalıştırıyoruz
+            text=True  # Run in text mode.
         )
 
-        # Prompt'u gönderip çıktıyı alıyoruz.
+        # Send the prompt and read the output.
         output, error = proc.communicate(prompt, timeout=30)
 
         if error:
             print("Ollama stderr:", error)
         return output.strip()
     except subprocess.TimeoutExpired as e:
-        print("Ollama yanıt vermede zaman aşımına uğradı:", e)
+        print("Ollama timed out waiting for a response:", e)
         proc.kill()
         return "unknown"
     except Exception as e:
-        print("Ollama çalıştırılırken hata oluştu:", e)
+        print("An error occurred while running Ollama:", e)
         return "unknown"
 
 if __name__ == "__main__":
     test_prompt = "Godot'u aç ve bana aksiyon oyunu yarat."
     response = process_command_with_ollama(test_prompt)
-    print("Ollama model çıktısı:", response)
+    print("Ollama model output:", response)

@@ -5,12 +5,13 @@ import subprocess
 import shutil
 from ollama_integration import process_command_with_ollama
 
-# ----------------- AI Yanıtlarını Özelleştirme -----------------
+# ----------------- AI Response Normalization -----------------
 def extract_command_from_response(response: str) -> str:
     """
-    AI modelinden gelen ham yanıtı, normalize edilmiş komuta dönüştürür.
-    Örnek: Yanıt içinde "open godot" veya "godot'u aç" varsa "open_godot",
-    "create game" veya "oyun yarat" varsa "create_game" döndürür.
+    Converts the raw AI model response into a normalized command.
+    For example, if the response contains "open godot" or "godot'u aç",
+    it returns "open_godot". If it contains "create game" or "oyun yarat",
+    it returns "create_game". Otherwise, it returns "unknown".
     """
     lower_resp = response.lower()
     if "open godot" in lower_resp or "godot'u aç" in lower_resp:
@@ -20,62 +21,64 @@ def extract_command_from_response(response: str) -> str:
     else:
         return "unknown"
 
-# ----------------- Otomatik Kurulum Fonksiyonu -----------------
+# ----------------- Automatic Installation Function -----------------
 def install_godot(preferred_command="godot") -> bool:
     """
-    Eğer belirtilen 'godot' komutu sistemde bulunamazsa, otomatik olarak
-    'sudo apt install -y godot3' komutunu çalıştırır.
-    Kurulum sonrası önce "godot" komutunu, eğer bulunamazsa "godot3" komutunu kontrol eder.
-    Eğer uygun komut tespit edilirse True, aksi halde False döndürür.
+    Checks if the specified 'godot' command exists on the system.
+    If not, it attempts to automatically install it using:
+      sudo apt install -y godot3
+    After installation, it checks first for the "godot" command,
+    then for "godot3". Returns True if a valid command is found,
+    and False otherwise.
     """
     if shutil.which(preferred_command) is None:
-        print(f"Hata: '{preferred_command}' komutu bulunamadı. Otomatik kurulum deneniyor...")
+        print(f"Error: '{preferred_command}' command not found. Attempting automatic installation...")
         try:
             subprocess.run(["sudo", "apt", "install", "-y", "godot3"], check=True)
         except Exception as e:
-            print("Otomatik kurulum başarısız oldu:", e)
+            print("Automatic installation failed:", e)
             return False
-        # Kurulum sonrası kontrol: önce "godot", sonra "godot3"
+        # Check after installation: first "godot", then "godot3"
         if shutil.which("godot") is not None:
-            print("'godot' komutu tespit edildi.")
+            print("'godot' command detected.")
             return True
         elif shutil.which("godot3") is not None:
-            print("'godot3' komutu tespit edildi.")
+            print("'godot3' command detected.")
             return True
         else:
-            print("Otomatik kurulum sonrası da Godot bulunamadı. Lütfen manuel kurulum yapın.")
+            print("Godot not found even after automatic installation. Please install it manually.")
             return False
     return True
 
-# ----------------- Otomasyon Fonksiyonları -----------------
+# ----------------- Automation Functions -----------------
 def perform_action_open_godot():
     """
-    Godot'u açar; eğer bulunamazsa otomatik kurulum denemesi yapar.
+    Launches Godot. If Godot is not found, it attempts an automatic installation.
     """
-    godot_command = "godot"  # Tercih edilen komut
+    godot_command = "godot"  # Preferred command
     if not install_godot(godot_command):
         return
-    # Eğer "godot" hala bulunamıyorsa, "godot3" kontrol edelim.
+    # If "godot" is still not found, check for "godot3"
     if shutil.which(godot_command) is None:
         if shutil.which("godot3") is not None:
             godot_command = "godot3"
         else:
-            print("Godot komutu bulunamadı.")
+            print("Godot command not found.")
             return
     try:
         subprocess.Popen([godot_command])
-        print("Godot açıldı.")
+        print("Godot has been launched.")
     except Exception as e:
-        print("Godot açılamadı, hata:", e)
+        print("Failed to launch Godot, error:", e)
 
 def search_images(keyword, folder="images"):
     """
-    Belirtilen klasörde, anahtar kelimeyi içeren resim dosyalarını arar.
-    Desteklenen uzantılar: .png, .jpg, .jpeg
+    Searches the specified folder for image files containing the keyword.
+    Supported file extensions are: .png, .jpg, .jpeg.
     """
     matching_files = []
     if not os.path.exists(folder):
-        print(f"Klasör '{folder}' bulunamadı!")
+        print(f"Folder '{folder}' not found!")
         return matching_files
     for filename in os.listdir(folder):
         if keyword.lower() in filename.lower() and filename.lower().endswith((".png", ".jpg", ".jpeg")):
@@ -84,13 +87,13 @@ def search_images(keyword, folder="images"):
 
 def generate_game_code(command_text, images):
     """
-    Komut metni ve bulunan resimler temelinde, Godot için tam işlevsel bir GDScript (Node2D tabanlı) üretir.
-    Her resim için sahneye Sprite eklenir.
+    Generates a fully functional Godot GDScript (based on Node2D) using the provided command text and found images.
+    For each image, a Sprite is created and added to the scene.
     """
-    code = "# Otomatik Üretilmiş Godot Scripti\n"
+    code = "# Automatically Generated Godot Script\n"
     code += "extends Node2D\n\n"
     code += "func _ready():\n"
-    code += "\tprint('Otomatik oluşturulmuş oyun sahnesi oluşturuldu.')\n"
+    code += "\tprint('Automatically generated game scene created.')\n"
     if images:
         for i, img in enumerate(images):
             godot_path = img.replace(os.sep, '/')
@@ -101,22 +104,24 @@ def generate_game_code(command_text, images):
             code += f"\tsprite{i}.position = Vector2({pos_x}, {pos_y})\n"
             code += f"\tadd_child(sprite{i})\n\n"
     else:
-        code += "\tprint('Resim bulunamadı, lütfen images klasörünü kontrol edin.')\n"
+        code += "\tprint('No images found, please check the images folder.')\n"
     return code
 
 def save_code_to_file(code, filename="generated_game.gd"):
-    """Oluşturulan GDScript kodunu belirtilen dosyaya kaydeder."""
+    """
+    Saves the generated GDScript code to the specified file.
+    """
     with open(filename, "w", encoding="utf-8") as f:
         f.write(code)
-    print(f"Oyun kodu '{filename}' dosyasına kaydedildi.")
+    print(f"Game code saved to '{filename}'.")
 
 def perform_action_create_game(command_text):
     """
-    "Oyun yarat" komutu için:
-      - Komut metninden anahtar kelime çıkarılır.
-      - Belirtilen klasörden resimler aranır.
-      - Resimler ve komut metni temelinde otomatik Godot scripti üretilir ve kaydedilir.
-      - (İsteğe bağlı) Godot, projenin mevcut diziniyle açılır.
+    For the "create game" command:
+      - Extracts a keyword from the command text.
+      - Searches for images in the specified folder.
+      - Generates and saves a Godot GDScript based on the command text and found images.
+      - Optionally launches Godot with the current directory as the project path.
     """
     keywords = ["action", "platform", "rpg", "puzzle", "adventure", "aksiyon", "platform", "rpg", "puzzle", "macera"]
     found_keyword = None
@@ -126,43 +131,42 @@ def perform_action_create_game(command_text):
             break
     if not found_keyword:
         found_keyword = "default"
-    print("Kullanılacak anahtar kelime:", found_keyword)
+    print("Keyword to be used:", found_keyword)
 
     images = search_images(found_keyword)
-    print("Bulunan resimler:", images)
+    print("Images found:", images)
 
     code = generate_game_code(command_text, images)
     save_code_to_file(code)
 
     try:
         subprocess.Popen(["godot", "--path", os.getcwd()])
-        print("Godot açıldı, lütfen sahneyi kontrol edin.")
+        print("Godot has been launched. Please check the scene.")
     except Exception as e:
-        print("Godot açılırken hata oluştu:", e)
+        print("Failed to launch Godot, error:", e)
 
 def self_improve_system():
     """
-    (Placeholder) – Sistem, loglama veya geribildirimlere dayalı olarak kendini geliştirebilir.
-    İlerleyen aşamalarda bu fonksiyon, AI modelinden geri bildirim alarak dinamik düzenlemeler yapacak şekilde genişletilebilir.
+    (Placeholder) – This function can be expanded in the future to allow the system to self-improve based on logging or feedback.
     """
-    print("Kendini geliştirme rutini çalıştırılıyor...")
-    # Gelecekte AI yanıtlarına göre sistemin kendini iyileştirme kodları eklenebilir.
+    print("Running self-improvement routine...")
+    # Future improvements based on AI responses can be added here.
 
 def main():
-    print("Sistem başlatıldı. Çıkmak için 'çık' veya 'exit' yazabilirsiniz.")
+    print("System started. Type 'çık' or 'exit' to quit.")
     while True:
-        print("\nKomut bekleniyor. Örnek: \"Godot'u aç ve bana aksiyon oyunu yarat.\"")
-        command_text = input("Komut girin: ").strip()
+        print("\nAwaiting command. Example: \"Godot'u aç ve bana aksiyon oyunu yarat.\"")
+        command_text = input("Enter command: ").strip()
         if command_text.lower() in ["çık", "exit"]:
-            print("Sistem kapatılıyor...")
+            print("Shutting down the system...")
             break
         if not command_text:
-            print("Komut boş bırakıldı. Lütfen geçerli bir komut girin.")
+            print("Empty command. Please enter a valid command.")
             continue
 
-        # Ollama üzerinden modelden yanıt alıyoruz.
+        # Get the AI model response via Ollama.
         ai_response = process_command_with_ollama(command_text)
-        print("AI model çıktısı:", ai_response)
+        print("AI model response:", ai_response)
 
         normalized_command = extract_command_from_response(ai_response)
         if normalized_command == "open_godot":
@@ -170,7 +174,7 @@ def main():
         elif normalized_command == "create_game":
             perform_action_create_game(command_text)
         else:
-            print("Bilinmeyen komut. Lütfen komutu gözden geçirin.")
+            print("Unknown command. Please review the command.")
 
         self_improve_system()
 
