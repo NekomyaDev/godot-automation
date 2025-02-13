@@ -1,0 +1,15 @@
+# requirements.txt
+
+# This project requires Python 3.8 or later.
+# It mainly uses Python's Standard Library modules:
+#   - os, time, random, subprocess, shutil
+#
+# External dependencies:
+# - Ollama CLI (required for AI model integration; install from https://ollama.com)
+#
+# - Godot Engine:
+#   The project includes an automatic installation routine for Linux systems.
+#   If Godot is not found, it attempts to run:
+#       sudo apt install -y godot3
+#   Ensure you have the necessary sudo privileges.
+#
